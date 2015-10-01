@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 """
-    A helper script for the file syncronization software "Unison". It take care of unneeded
+    A helper script for the file syncronization software "Unison". It take care of unnecessary
     backup-files created but never deleted by Unison.
 """
 
@@ -31,23 +31,26 @@ import sys
 import os.path
 import argparse
 import logging
+from datetime import datetime, timedelta
 from configobj import ConfigObj
 
 # read commandline arguments
 parser = argparse.ArgumentParser(description='Unison Walker {} -- Search for unnecessary unison backup files.'.format(__version__))
 parser.add_argument('profile_name', metavar='PROFILE_NAME', help='Name of the unison profile to use.')
-#parser.add_argument('--age', dest='age_in_days', help='The file age in days which make them "old".')
+parser.add_argument('-a', '--age', dest='age_in_days', help='The file age in days which make them "old".')
+parser.add_argument('-d', '--debug', action='store_true', dest='debugon', help='Switch on debug mode. Give more messages on standard output.')
 
 # store all arguments in objects/variables of the local namespace
 locals().update(vars(parser.parse_args()))
 
 # logging
-logging.getLogger().setLevel(logging.DEBUG)
+if debugon:
+    logging.getLogger().setLevel(logging.DEBUG)
 
 # defaults
 backupprefix = '.bak'
 filestokill = []
-backuplocation = os.path.expanduser('~/.unison/backup/')
+backupdir = os.path.expanduser('~/.unison/backup/')
 backupmax = 2
 
 # the profile
@@ -75,6 +78,11 @@ for line in iter(profile_file):
             backuproot = line.split('=')[1].strip()
             if backuproot[-1] is not '/':
                 backuproot += '/'
+        # backupdir
+        if line.startswith('backupdir'):
+            backupdir = line.split('=')[1].strip()
+            if backupdir[-1] != os.path.sep:
+                backupdir += os.path.sep
         # backupprefix
         if line.startswith('backupprefix'):
             backupprefix = line.split('=')[1].strip()
@@ -84,14 +92,34 @@ for line in iter(profile_file):
 
 profile_file.close()
 
+
+def _IsUnnecessary(orgfile, tokill):
+    """
+        Return True if 'orgfile' doesn't exist and the last access time of 'tokill' is older then
+        the specified 'age_in_days' 
+        Else return False.
+    """
+    if os.path.exists(orgfile):
+        return False
+
+    delta = datetime.now() - datetime.fromtimestamp(os.path.getatime(tokill))
+    maxdelta = timedelta(days=int(age_in_days))
+    if maxdelta > delta:
+        return False
+
+    return True
+
+
 # walk throw backup location
-for root, dirs, files in os.walk(backuplocation):
+for root, dirs, files in os.walk(backupdir):
     for file in files:
         if not file.startswith(backupprefix):
-            orgfile = os.path.join(root.replace(backuplocation, backuproot), file)
-            if not os.path.exists(orgfile):
+            orgfile = os.path.join(root.replace(backupdir, backuproot), file)
+            tokill = os.path.join(root, file)
+            # unnecessary?
+            if _IsUnnecessary(orgfile, tokill):
                 # main backup-file
-                filestokill += [os.path.join(root, file)]
+                filestokill += [tokill]
                 # older backups
                 i = backupmax
                 while i > 0:
@@ -104,4 +132,5 @@ for root, dirs, files in os.walk(backuplocation):
 for k in filestokill:
     print(k)
 sys.exit(0)
+
 
