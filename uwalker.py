@@ -36,8 +36,8 @@ from configobj import ConfigObj
 
 # read commandline arguments
 parser = argparse.ArgumentParser(description='Unison Walker {} -- Search for unnecessary unison backup files.'.format(__version__))
-parser.add_argument('profile_name', metavar='PROFILE_NAME', help='Name of the unison profile to use.')
-parser.add_argument('-a', '--age', dest='age_in_days', help='The file age in days which make them "old".')
+parser.add_argument('profile_name', metavar='PROFILE_NAME', type=str, help='Name of the unison profile to use.')
+parser.add_argument('age_in_days', metavar='AGE_IN_DAYS', type=int, help='The file age in days which make them "old".')
 parser.add_argument('-d', '--debug', action='store_true', dest='debugon', help='Switch on debug mode. Give more messages on standard output.')
 
 # store all arguments in objects/variables of the local namespace
