@@ -1,5 +1,5 @@
 # Unison-Walker
-A helper script for the file syncronization software [Unison](https://www.cis.upenn.edu/~bcpierce/unison)". It take care of unneeded backup-files created but never deleted by Unison.
+A helper script for the file syncronization software [Unison](https://www.cis.upenn.edu/~bcpierce/unison). It take care of unneeded backup-files created but never deleted by Unison.
 # Details
 ## The problem
 *Unison* can be setup to [create a backup file](https://www.cis.upenn.edu/~bcpierce/unison/download/releases/stable/unison-manual.html#backups) (hereinafter called *bak-file*) when a file is modified or deleted while a synchronization process. But the problem is it doesn't take care of the deletion of that file. When you use *Unison* over a huge periode of time your hard drive will fill up with hidden bak-files without any control.
