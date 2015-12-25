@@ -52,9 +52,10 @@ def _createArgumentParser(addToGlobal=True):
     parser.add_argument('-i', '--info', action='store_true', dest='argInfo',
                         default=False, help='Show informations about the '
                         'result.')
-    parser.add_argument('-d', '--debug', action='store_true', dest='argDebugon',
-                        help='Switch on debug mode. Give more messages on '
-                        'standard output and implicite --info.')
+    parser.add_argument('-d', '--debug', action='store_true',
+                        dest='argDebugon', help='Switch on debug mode. '
+                        'Give more messages on standard output and '
+                        'implicite --info.')
 
     if addToGlobal:
         globals().update(vars(parser.parse_args()))
@@ -90,18 +91,19 @@ def _IsUnnecessary(orgfile, relevant):
     if os.path.exists(orgfile):
         return False
 
-    #  
     if os.path.exists(relevant) is False:
         if os.path.lexists(relevant):  # broken symbolik link?
             return True
         else:
-            print('orgfile: ' + orgfile)
-            print('relevant: ' + relevant)
-            raise Exception('bähm')
+            # this should never happen
+            raise Exception('Original and backup file does not seam to exist. '
+                            'Please contact the developer per mail at {} '
+                            'with that error message!'.format(__email__))
             return False
 
-    # age of 'relevant' file depending on its last modification time
-    relevantAge = datetime.now() - datetime.fromtimestamp(os.path.getatime(relevant))
+    # age of 'relevant' file depending on its last access time
+    lastAccess = os.path.getatime(relevant)
+    relevantAge = datetime.now() - datetime.fromtimestamp(lastAccess)
     thresholdAge = timedelta(days=int(age_in_days))
     if thresholdAge > relevantAge:
         return False
@@ -142,7 +144,8 @@ def _readProfileFile():
             if line:
                 # root
                 if line.startswith('root'):
-                    if ':' in line: break
+                    if ':' in line:
+                        break
                     backuproot = line.split('=')[1].strip()
                     if backuproot[-1] is not '/':
                         backuproot += '/'
@@ -163,7 +166,8 @@ def _readProfileFile():
                     # only central profiles are supported
                     if backuploc != 'central':
                         logging.error('Only "central" backup locations are'
-                        'supported. See "backuploc" in your profile file.')
+                                      'supported. See "backuploc" in your '
+                                      'profile file.')
                         sys.exit(-1)
 
     logging.debug('Read from {}:'.format(profile_filename))
@@ -199,11 +203,12 @@ def _findRelevantFiles():
                 # older backups
                 i = backupmax
                 while i > 0:
-                    fn = os.path.join(root, '{}.{}.{}'.format(backupprefix, i, f))
+                    fn = os.path.join(root, '{}.{}.{}'
+                                      .format(backupprefix, i, f))
                     if os.path.exists(fn):
                         relevantFiles.append(fn)
                     i -= 1
-    
+
     return relevantFiles
 
 
@@ -235,12 +240,13 @@ def _output(relevantFiles):
         try:
             outfile.write(f + '\n')
         except UnicodeEncodeError as err:
+            saveName = f.encode(sys.getfilesystemencoding(),
+                                errors='surrogateescape').decode('latin-1')
             logging.warning('There is a encoding problem with a filename. It '
                             'will be removed from the list of relevant files.'
                             ' Please handle that problem yourself. This '
                             '"could" be the file: {}'
-                            .format(f.encode(sys.getfilesystemencoding(),
-                            errors='surrogateescape').decode('latin-1')))
+                            .format(saveName))
             # alternative: repr(f)[1:-1]
             relevantFiles.remove(f)
 
