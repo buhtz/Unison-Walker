@@ -8,9 +8,9 @@ import sys
 import os.path
 import argparse
 import logging
+import subprocess
 import humanize
 from datetime import datetime, timedelta
-from configobj import ConfigObj
 
 __author__ = 'Christian Buhtz'
 __date__ = 'September 2015'
@@ -18,7 +18,7 @@ __maintainer__ = __author__
 __email__ = 'c.buhtz@posteo.jp'
 __license__ = 'GPLv3'
 __app_name__ = 'Unison Walker'
-__version__ = '0.0.2a'
+__version__ = '0.0.2b'
 
 #   This program is free software: you can redistribute it and/or modify
 #   it under the terms of the GNU General Public License as published by
@@ -56,6 +56,18 @@ def _createArgumentParser(addToGlobal=True):
                         dest='argDebugon', help='Switch on debug mode. '
                         'Give more messages on standard output and '
                         'implicite --info.')
+    # --action
+    parser.add_argument('--action', metavar='CMD', type=str,
+                        dest='argAction', help='Will execute CMD on each file '
+                        'in the result list. Use this with care!')
+    # --no-rm-security-question
+    parser.add_argument('--no-rm-security-question', action='store_true',
+                        dest='argNoAskRM', help='Prevent security question if '
+                        'you use "rm" in your --action. Handle with care!')
+    # --no-mv-security-question
+    parser.add_argument('--no-mv-security-question', action='store_true',
+                        dest='argNoAskMV', help='Prevent security question if '
+                        'you use "mv" in your --action. Handle with care!')
 
     if addToGlobal:
         globals().update(vars(parser.parse_args()))
@@ -77,6 +89,32 @@ def _setupLogging():
         logging.basicConfig(format=logformat, level=logging.INFO)
     else:
         logging.basicConfig(format=logformat, level=logging.WARNING)
+
+
+def _askForAction(a):
+    """
+    """
+    global argAction
+    q = ('ATTENTION: Your action include "{}". You should use that with '
+         'care.\nAre you really sure that you want to execute this action '
+         'on each file?\nThe actions is: "{}"\n'
+         'Type "yes" if it is so: '.format(a, argAction))
+
+    if input(q).lower() == 'yes':
+        return True
+    else:
+        return False
+
+
+def _actionUser(filename):
+    """
+        Build up the command for the specified 'filename' and execute it.
+    """
+    global argAction
+    cmd = argAction.split()
+    cmd.append(filename)
+    print(cmd)
+    subprocess.check_call(cmd)
 
 
 def _IsUnnecessary(orgfile, relevant):
@@ -193,6 +231,10 @@ def _findRelevantFiles():
     for root, dirs, files in os.walk(backupdir):
         # each file
         for f in files:
+            # is it a backup of a backup?
+            if f.startswith(backupprefix):
+                continue
+
             orgfile = os.path.join(root.replace(backupdir, backuproot), f)
             relfile = os.path.join(root, f)
 
@@ -264,6 +306,9 @@ if __name__ == '__main__':
     global backupdir
     global backupmax
     global backuproot
+    global argAction
+    global argAskNoRM
+    global argAskNoMV
     backupprefix = '.bak'
     backupdir = os.path.expanduser('~/.unison/backup/')
     backupmax = 2
@@ -275,8 +320,23 @@ if __name__ == '__main__':
     # find relevant files
     relevantFiles = _findRelevantFiles()
 
-    # print the result
-    _output(relevantFiles)
+    # do an action?
+    if argAction:
+        argAction = argAction.replace("'", "")
+        argAction = argAction.replace('"', '')
+        if 'rm' in argAction and not argNoAskRM:
+            if _askForAction('rm') is False:
+                sys.exit()
+        if 'mv' in argAction and not argNoAskMV:
+            if _askForAction('mv') is False:
+                sys.exit()
+
+        # each relevant file
+        for f in relevantFiles:
+            _actionUser(f)
+    else:
+        # print the result
+        _output(relevantFiles)
 
     # bye bye
     sys.exit()
