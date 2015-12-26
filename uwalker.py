@@ -113,7 +113,6 @@ def _actionUser(filename):
     global argAction
     cmd = argAction.split()
     cmd.append(filename)
-    print(cmd)
     subprocess.check_call(cmd)
 
 
