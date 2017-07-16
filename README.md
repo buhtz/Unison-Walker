@@ -1,3 +1,5 @@
+# This repo is no out-dated and migrated to GitLab. Please use the [repository on GitLab](https://gitlab.com/buhtz/Unison-Walker).
+
 # Unison-Walker
 A helper script for the file syncronization software [Unison](https://www.cis.upenn.edu/~bcpierce/unison). It take care of unneeded backup-files created but never deleted by Unison.
 # Details
